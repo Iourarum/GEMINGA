@@ -1,0 +1,16 @@
+[build-system]
+requires = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "geminga"
+version = "0.1.0"
+description = "GEMINGA — Memory-Efficient Arrow-Native Dataset Explorer & Reader"
+requires-python = ">=3.9"
+dependencies = ["pyarrow>=14"]
+license = { text = "Apache-2.0" }
+
+[tool.maturin]
+python-source = "python"
+module-name = "geminga._core"
+features = ["pyo3/extension-module"]

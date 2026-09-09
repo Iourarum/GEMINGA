@@ -1,0 +1,33 @@
+[package]
+name = "geminga"
+version = "0.1.0"
+edition = "2021"
+description = "GEMINGA — Governed, Extensible, Memory-budgeted Ingestion for N-modal Genomics and Arrays"
+license = "Apache-2.0"
+
+[lib]
+name = "geminga"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+arrow = "59.3"
+arrow-pyarrow = "59.3"
+parquet = { version = "59.3", features = ["async", "object_store"] }
+object_store = { version = "0.13", features = ["http"] }
+pyo3 = { version = "0.29", features = ["extension-module"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"] }
+futures = "0.3"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-native-roots", "http2", "json", "gzip"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+bytes = "1"
+thiserror = "2"
+needletail = "0.7"
+flate2 = "1"
+
+[profile.release]
+opt-level = 3
+lto = false
+codegen-units = 16
+debug = false
+strip = true

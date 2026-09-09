@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+title: "GEMINGA: memory-budgeted streaming of omics data"
+message: "If you use GEMINGA in research, please cite it."
+type: software
+authors:
+  - family-names: "<surname>"
+    given-names: "Sebastian"
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+repository-code: "https://github.com/<user>/geminga"
+license: Apache-2.0
+version: 0.1.0
+date-released: "2026-09-03"
+keywords: [omics, streaming, out-of-core, spatial-transcriptomics, rust, pyo3]

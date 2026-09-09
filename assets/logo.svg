@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="GEMINGA logo: a pulsar whose beams are broken into discrete data chunks">
+  <title>GEMINGA</title>
+  <defs>
+    <linearGradient id="beamGrad" gradientUnits="userSpaceOnUse" x1="256" y1="196" x2="256" y2="26">
+      <stop offset="0"   stop-color="#FFC300"/>
+      <stop offset="0.45" stop-color="#FF8A00"/>
+      <stop offset="1"   stop-color="#FF4D5E"/>
+    </linearGradient>
+    <radialGradient id="coreGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0"    stop-color="#FFF6D5" stop-opacity="1"/>
+      <stop offset="0.35" stop-color="#FFC300" stop-opacity="0.85"/>
+      <stop offset="0.75" stop-color="#FF8A00" stop-opacity="0.25"/>
+      <stop offset="1"    stop-color="#E63946" stop-opacity="0"/>
+    </radialGradient>
+    <g id="beam">
+      <polygon points="241,190 271,190 278.7,155 233.3,155"        fill="url(#beamGrad)"/>
+      <polygon points="231.5,147 280.5,147 288.2,112 223.8,112"    fill="url(#beamGrad)" opacity="0.97"/>
+      <polygon points="222.1,104 289.9,104 297.6,69 214.4,69"      fill="url(#beamGrad)" opacity="0.9"/>
+      <polygon points="212.6,61 299.4,61 307.1,26 204.9,26"        fill="url(#beamGrad)" opacity="0.78"/>
+    </g>
+  </defs>
+
+  <rect width="512" height="512" rx="104" fill="#0B2545"/>
+
+  <!-- rotation plane, offset from the beam axis as in a real pulsar -->
+  <ellipse cx="256" cy="256" rx="182" ry="58" fill="none" stroke="#4CC9F0"
+           stroke-width="9" opacity="0.55" transform="rotate(-28 256 256)"/>
+
+  <!-- two opposed beams, each quantised into chunks -->
+  <g transform="rotate(-28 256 256)"><use href="#beam"/></g>
+  <g transform="rotate(152 256 256)"><use href="#beam"/></g>
+
+  <!-- core -->
+  <circle cx="256" cy="256" r="86" fill="url(#coreGlow)"/>
+  <circle cx="256" cy="256" r="46" fill="none" stroke="#4CC9F0" stroke-width="7" opacity="0.9"/>
+  <circle cx="256" cy="256" r="27" fill="#FFC300"/>
+  <circle cx="256" cy="256" r="12" fill="#FFF6D5"/>
+
+  <!-- Castor and Pollux -->
+  <circle cx="97"  cy="392" r="8" fill="#4CC9F0" opacity="0.85"/>
+  <circle cx="415" cy="120" r="6" fill="#FFF6D5" opacity="0.7"/>
+</svg>

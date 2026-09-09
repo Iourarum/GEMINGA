@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1360 340" width="1360" height="340" role="img" aria-label="GEMINGA — streaming omics for resource-aware PhDs">
+  <title>GEMINGA — streaming omics for resource-aware PhDs</title>
+  <defs>
+    <linearGradient id="bg2" gradientUnits="userSpaceOnUse" x1="256" y1="196" x2="256" y2="26">
+      <stop offset="0" stop-color="#FFC300"/><stop offset="0.45" stop-color="#FF8A00"/><stop offset="1" stop-color="#FF4D5E"/>
+    </linearGradient>
+    <radialGradient id="cg2" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFF6D5"/><stop offset="0.35" stop-color="#FFC300" stop-opacity="0.85"/>
+      <stop offset="0.75" stop-color="#FF8A00" stop-opacity="0.25"/><stop offset="1" stop-color="#FF4D5E" stop-opacity="0"/>
+    </radialGradient>
+    <g id="beam2">
+      <polygon points="241,190 271,190 278.7,155 233.3,155"     fill="url(#bg2)"/>
+      <polygon points="231.5,147 280.5,147 288.2,112 223.8,112" fill="url(#bg2)" opacity="0.97"/>
+      <polygon points="222.1,104 289.9,104 297.6,69 214.4,69"   fill="url(#bg2)" opacity="0.9"/>
+      <polygon points="212.6,61 299.4,61 307.1,26 204.9,26"     fill="url(#bg2)" opacity="0.78"/>
+    </g>
+  </defs>
+
+  <rect width="1360" height="340" rx="40" fill="#0B2545"/>
+
+  <g transform="translate(28,29) scale(0.55)">
+    <ellipse cx="256" cy="256" rx="182" ry="58" fill="none" stroke="#4CC9F0" stroke-width="9" opacity="0.55" transform="rotate(-28 256 256)"/>
+    <g transform="rotate(-28 256 256)"><use href="#beam2"/></g>
+    <g transform="rotate(152 256 256)"><use href="#beam2"/></g>
+    <circle cx="256" cy="256" r="86" fill="url(#cg2)"/>
+    <circle cx="256" cy="256" r="46" fill="none" stroke="#4CC9F0" stroke-width="7" opacity="0.9"/>
+    <circle cx="256" cy="256" r="27" fill="#FFC300"/>
+    <circle cx="256" cy="256" r="12" fill="#FFF6D5"/>
+  </g>
+
+  <g font-family="ui-sans-serif, system-ui, 'Segoe UI', Inter, Roboto, Helvetica, Arial, sans-serif">
+    <text x="368" y="172" font-size="100" font-weight="800" letter-spacing="10" fill="#FFF6D5">GEMINGA</text>
+    <text x="374" y="228" font-size="32" font-weight="500" letter-spacing="1.4" fill="#4CC9F0">streaming omics for resource-aware PhDs</text>
+    <rect x="374" y="252" width="84" height="8" rx="4" fill="#FF4D5E"/>
+    <rect x="466" y="252" width="84" height="8" rx="4" fill="#FFC300"/>
+    <rect x="558" y="252" width="84" height="8" rx="4" fill="#4CC9F0"/>
+  </g>
+</svg>

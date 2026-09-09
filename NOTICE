@@ -1,0 +1,11 @@
+GEMINGA
+Copyright 2026 The GEMINGA authors
+
+Licensed under the Apache License, Version 2.0.
+
+This product bundles no third-party source. It links, at build time, against:
+  arrow, parquet, object_store  (Apache-2.0)  https://github.com/apache/arrow-rs
+  pyo3, tokio, reqwest          (Apache-2.0 / MIT)
+  needletail                    (MIT)         https://github.com/onecodex/needletail
+At run time it optionally uses h5py, pyarrow, tifffile, zarr, scipy and numpy,
+each under its own license.
