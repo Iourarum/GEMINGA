@@ -8,6 +8,7 @@
 
 <p align="center">
   <b>G</b>ated, <b>E</b>xtensible, <b>M</b>emory-budgeted <b>I</b>ngestion for <b>N</b>-modal <b>G</b>enomics and <b>A</b>rrays
+  <i>May work with many datasets outside of its initial design... </i>
 </p>
 
 <p align="center">
