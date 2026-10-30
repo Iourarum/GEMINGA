@@ -2,7 +2,8 @@
 
     python examples/stream_to_training.py HuggingFaceTB/smoltalk2 Mid train
 """
-import sys, time
+import sys
+import time
 import geminga as md
 
 dataset, config, split = (sys.argv[1:] + [None, None, None])[:3]

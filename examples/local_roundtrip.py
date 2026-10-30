@@ -4,9 +4,11 @@ pushdown, spread sampling and materialization move only the bytes they need.
     python examples/make_test_data.py /tmp/test_bins.parquet 2000000
     python examples/local_roundtrip.py /tmp/test_bins.parquet
 """
-import os, sys, time
+import os
+import sys
+import time
 sys.path.insert(0, os.path.dirname(__file__))
-import pyarrow as pa, pyarrow.parquet as pq
+import pyarrow.parquet as pq
 import geminga as md
 from range_server import serve, SERVED
 

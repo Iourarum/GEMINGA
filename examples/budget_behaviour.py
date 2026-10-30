@@ -1,5 +1,6 @@
 """The governor's three behaviours: adaptive chunking, backpressure, and fail-fast."""
-import threading, time
+import threading
+import time
 import geminga as g
 
 PQ = "/home/claude/test_bins.parquet"

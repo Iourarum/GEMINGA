@@ -1,6 +1,9 @@
 """Generate a Stereo-seq-shaped Parquet file: (x, y, gene, count) at bin level, many row groups.
 Row groups are ~100k rows so a sample of a few groups is a few MB, like the Hub's converted files."""
-import sys, numpy as np, pyarrow as pa, pyarrow.parquet as pq
+import sys
+import numpy as np
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 n = int(sys.argv[2]) if len(sys.argv) > 2 else 2_000_000
 rng = np.random.default_rng(7)

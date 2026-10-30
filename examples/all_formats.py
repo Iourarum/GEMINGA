@@ -4,7 +4,10 @@ resident high-water mark measured by the OS (RSS), not just claimed.
     python examples/make_omics_fixtures.py /tmp/gem
     python examples/all_formats.py /tmp/gem
 """
-import os, resource, sys, time
+import os
+import resource
+import sys
+import time
 import numpy as np
 import geminga as g
 
@@ -84,7 +87,7 @@ if os.path.exists(pq):
         rows += b.num_rows; peak = max(peak, B.stats()["ram"]["used"])
     print(f"  streamed {rows:,} rows, peak resident {g.human(peak)}")
 
-print(f"\n=== budget after everything ===")
+print("\n=== budget after everything ===")
 for tier, s in B.stats().items():
     if s["capacity"]:
         print(f"  {tier:<6} peak {s['peak_human']:>10}  of {s['capacity_human']:>10}  "

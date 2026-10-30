@@ -3,7 +3,10 @@
 Used to test geminga's HTTP path locally (the Hub is not reachable from every sandbox).
 Run:  python examples/range_server.py /path/to/dir 8765
 """
-import os, sys, threading
+import functools
+import os
+import sys
+import threading
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 SERVED = {"bytes": 0, "requests": 0, "ranges": 0}
@@ -64,8 +67,10 @@ class RangeHandler(SimpleHTTPRequestHandler):
             SERVED["bytes"] += size
 
 def serve(directory: str, port: int) -> HTTPServer:
-    os.chdir(directory)
-    httpd = HTTPServer(("127.0.0.1", port), RangeHandler)
+    # Serve `directory` without chdir: a process-wide cwd change leaks into whatever imports
+    # this (the test suite did, and every later relative fixture path broke).
+    handler = functools.partial(RangeHandler, directory=os.path.abspath(directory))
+    httpd = HTTPServer(("127.0.0.1", port), handler)
     t = threading.Thread(target=httpd.serve_forever, daemon=True); t.start()
     return httpd
 

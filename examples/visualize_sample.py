@@ -2,7 +2,9 @@
 
     python examples/visualize_sample.py /path/or/url --hub org/name config split
 """
-import sys, numpy as np, geminga as md
+import sys
+import numpy as np
+import geminga as md
 
 if sys.argv[1] == "--hub":
     ds = md.open_hub(*sys.argv[2:5])

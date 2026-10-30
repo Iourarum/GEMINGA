@@ -1,5 +1,8 @@
 """Generate one small fixture per supported format, for the end-to-end self-test."""
-import gzip, os, sys, numpy as np
+import gzip
+import os
+import sys
+import numpy as np
 
 out = sys.argv[1] if len(sys.argv) > 1 else "/tmp/gem"
 os.makedirs(out, exist_ok=True)
@@ -29,7 +32,8 @@ with open(f"{out}/transcripts.fasta", "w") as fh:
 print(f"fasta: 2,000 transcripts, {os.path.getsize(f'{out}/transcripts.fasta'):,} B")
 
 # --- h5ad (scRNA-seq, CSR counts) -------------------------------------------
-import anndata as ad, scipy.sparse as sp
+import anndata as ad
+import scipy.sparse as sp
 n_obs, n_vars = 20_000, 3_000
 X = sp.random(n_obs, n_vars, density=0.05, format="csr", dtype=np.float32,
               random_state=3, data_rvs=lambda k: rng.poisson(3, k).astype(np.float32) + 1)
