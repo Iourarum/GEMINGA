@@ -4,7 +4,7 @@
 //! Three tiers, each an independent pool:
 //!   - `ram`   host memory holding decoded chunks
 //!   - `vram`  device memory (accounting only — the caller does the actual cudaMalloc via
-//!             torch/cupy; GEMINGA just refuses to let it over-commit)
+//!     torch/cupy; GEMINGA just refuses to let it over-commit)
 //!   - `spill` scratch space on disk for chunks you want to keep but not hold in RAM
 //!
 //! Backpressure, not OOM: a request larger than the whole tier fails immediately with a message
@@ -76,11 +76,13 @@ impl Tier {
             st.grants += 1;
             return Ok(());
         }
-        // Doesn't fit now: wait for a release.
+        // Doesn't fit now: wait for a release. Every release wakes every waiter, so the
+        // deadline is measured from the first wait, not restarted on each wake.
         let start = Instant::now();
         st.waits += 1;
         loop {
-            let (guard, res) = self.cv.wait_timeout(st, timeout).unwrap();
+            let remaining = timeout.saturating_sub(start.elapsed());
+            let (guard, res) = self.cv.wait_timeout(st, remaining).unwrap();
             st = guard;
             if st.used + n <= self.capacity {
                 st.used += n;
@@ -89,7 +91,7 @@ impl Tier {
                 st.wait_millis += start.elapsed().as_millis() as u64;
                 return Ok(());
             }
-            if res.timed_out() {
+            if res.timed_out() || start.elapsed() >= timeout {
                 st.wait_millis += start.elapsed().as_millis() as u64;
                 self.denials.fetch_add(1, Ordering::Relaxed);
                 return Err(GemingaError::Budget(format!(
@@ -103,6 +105,24 @@ impl Tier {
                     human(self.capacity)
                 )));
             }
+        }
+    }
+
+    /// Reserve `n` bytes only if they are free right now: true when taken, false otherwise.
+    /// One lock, so two callers cannot both see the same free bytes and both proceed.
+    pub fn try_acquire(&self, n: u64) -> bool {
+        if n > self.capacity {
+            self.denials.fetch_add(1, Ordering::Relaxed);
+            return false;
+        }
+        let mut st = self.state.lock().unwrap();
+        if st.used + n <= self.capacity {
+            st.used += n;
+            st.peak = st.peak.max(st.used);
+            st.grants += 1;
+            true
+        } else {
+            false
         }
     }
 
@@ -164,6 +184,17 @@ impl BudgetInner {
         self.tier(tier)?.acquire(n, self.timeout)
     }
 
+    pub fn try_acquire(&self, tier: &str, n: u64) -> Result<bool> {
+        Ok(self.tier(tier)?.try_acquire(n))
+    }
+
+    /// The chunk a reader should plan when the caller gave no size: a quarter of what is free,
+    /// floored at 1 MB but never above what is free (the "chunk floor rule").
+    pub fn default_chunk(&self) -> u64 {
+        let avail = self.ram.available();
+        (avail / 4).max((1u64 << 20).min(avail)).max(1)
+    }
+
     pub fn release(&self, tier: &str, n: u64) {
         if let Ok(t) = self.tier(tier) {
             t.release(n);
@@ -182,12 +213,22 @@ pub struct Lease {
 
 impl Lease {
     pub fn new(budget: Option<Arc<BudgetInner>>, tier: &str, bytes: u64) -> Self {
-        Self { budget, tier: tier.to_string(), bytes, released: false }
+        Self {
+            budget,
+            tier: tier.to_string(),
+            bytes,
+            released: false,
+        }
     }
 
     /// A lease that accounts nothing — used when no budget is attached.
     pub fn none() -> Self {
-        Self { budget: None, tier: String::new(), bytes: 0, released: true }
+        Self {
+            budget: None,
+            tier: String::new(),
+            bytes: 0,
+            released: true,
+        }
     }
 
     pub fn bytes(&self) -> u64 {
@@ -202,6 +243,23 @@ impl Lease {
             self.released = true;
         }
     }
+
+    /// Resize a live lease to what was actually materialized: give back the surplus, or take
+    /// the shortfall (which may wait, like any acquire).
+    pub fn adjust(&mut self, actual: u64) -> Result<()> {
+        if self.released {
+            return Ok(());
+        }
+        if let Some(b) = &self.budget {
+            if actual < self.bytes {
+                b.release(&self.tier, self.bytes - actual);
+            } else if actual > self.bytes {
+                b.acquire(&self.tier, actual - self.bytes)?;
+            }
+        }
+        self.bytes = actual;
+        Ok(())
+    }
 }
 
 impl Drop for Lease {
@@ -215,7 +273,11 @@ pub fn human(n: u64) -> String {
     let mut x = n as f64;
     for (i, u) in U.iter().enumerate() {
         if x < 1024.0 || i == U.len() - 1 {
-            return if i == 0 { format!("{n} B") } else { format!("{x:.1} {u}") };
+            return if i == 0 {
+                format!("{n} B")
+            } else {
+                format!("{x:.1} {u}")
+            };
         }
         x /= 1024.0;
     }

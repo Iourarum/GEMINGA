@@ -4,13 +4,33 @@ build-backend = "maturin"
 
 [project]
 name = "geminga"
-version = "0.1.0"
+version = "0.18.0"
 description = "GEMINGA — Memory-Efficient Arrow-Native Dataset Explorer & Reader"
 requires-python = ">=3.9"
 dependencies = ["pyarrow>=14"]
 license = { text = "Apache-2.0" }
 
+[project.optional-dependencies]
+frames = ["polars>=1.0"]
+stage = ["wgpu>=0.18", "pillow>=9"]
+spatial = ["h5py", "scipy", "tifffile", "zarr"]
+neuro = ["nibabel", "pydicom"]
+figures = ["matplotlib"]
+all = ["polars>=1.0", "wgpu>=0.18", "pillow>=9", "h5py", "scipy", "tifffile", "zarr",
+       "nibabel", "pydicom", "matplotlib", "anndata"]
+
 [tool.maturin]
 python-source = "python"
 module-name = "geminga._core"
 features = ["pyo3/extension-module"]
+
+[tool.ruff]
+line-length = 110
+
+[tool.ruff.lint]
+# E701/E702: `a; b` one-liners are deliberate in the example scripts; E741: `l` for a text line.
+extend-ignore = ["E701", "E702", "E741"]
+
+[tool.ruff.lint.per-file-ignores]
+# Scripts set up paths and parse arguments before importing what they need.
+"examples/*" = ["E402"]

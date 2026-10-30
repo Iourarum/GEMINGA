@@ -1,6 +1,6 @@
 [package]
 name = "geminga"
-version = "0.1.0"
+version = "0.18.0"
 edition = "2021"
 description = "GEMINGA — Governed, Extensible, Memory-budgeted Ingestion for N-modal Genomics and Arrays"
 license = "Apache-2.0"
@@ -24,10 +24,12 @@ bytes = "1"
 thiserror = "2"
 needletail = "0.7"
 flate2 = "1"
+aho-corasick = "1.1.5"
+memchr = "2.8.3"
 
 [profile.release]
 opt-level = 3
-lto = false
+lto = "thin"
 codegen-units = 16
 debug = false
 strip = true

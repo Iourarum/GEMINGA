@@ -8,6 +8,6 @@ authors:
     orcid: "https://orcid.org/0000-0000-0000-0000"
 repository-code: "https://github.com/<user>/geminga"
 license: Apache-2.0
-version: 0.1.0
-date-released: "2026-09-03"
+version: 0.18.0
+date-released: "2026-10-13"
 keywords: [omics, streaming, out-of-core, spatial-transcriptomics, rust, pyo3]

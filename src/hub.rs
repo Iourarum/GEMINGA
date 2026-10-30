@@ -76,8 +76,8 @@ pub async fn list_parquet(
     let files: Vec<ParquetFile> = parsed
         .parquet_files
         .into_iter()
-        .filter(|f| config.map_or(true, |c| f.config == c))
-        .filter(|f| split.map_or(true, |s| f.split == s))
+        .filter(|f| config.is_none_or(|c| f.config == c))
+        .filter(|f| split.is_none_or(|s| f.split == s))
         .collect();
     if files.is_empty() {
         return Err(GemingaError::Invalid(format!(
@@ -97,11 +97,20 @@ pub struct StoreCache {
 
 impl StoreCache {
     pub fn new(token: Option<String>) -> Self {
-        Self { token, stores: HashMap::new(), tele: Arc::new(Telemetry::default()) }
+        Self {
+            token,
+            stores: HashMap::new(),
+            tele: Arc::new(Telemetry::default()),
+        }
     }
 
     /// Turn an `https://host/some/path.parquet` URL into (store rooted at origin, object path).
-    pub fn source_for_url(&mut self, url: &str, size: Option<u64>, label: String) -> Result<Source> {
+    pub fn source_for_url(
+        &mut self,
+        url: &str,
+        size: Option<u64>,
+        label: String,
+    ) -> Result<Source> {
         let parsed = reqwest::Url::parse(url)
             .map_err(|e| GemingaError::Invalid(format!("bad url {url}: {e}")))?;
         let origin = format!(
@@ -115,12 +124,19 @@ impl StoreCache {
             None => {
                 // Only send the token to the Hub itself; presigned CDN redirects must not get it
                 // (reqwest already drops Authorization on cross-host redirects, this is belt and braces).
-                let token = if origin.starts_with(HUB) { self.token.as_deref() } else { None };
+                let token = if origin.starts_with(HUB) {
+                    self.token.as_deref()
+                } else {
+                    None
+                };
                 let opts = ClientOptions::new()
                     .with_default_headers(default_headers(token)?)
                     .with_allow_http(parsed.scheme() == "http");
                 let store: Arc<dyn ObjectStore> = Arc::new(
-                    HttpBuilder::new().with_url(&origin).with_client_options(opts).build()?,
+                    HttpBuilder::new()
+                        .with_url(&origin)
+                        .with_client_options(opts)
+                        .build()?,
                 );
                 self.stores.insert(origin.clone(), store.clone());
                 store
@@ -130,7 +146,14 @@ impl StoreCache {
         // refs/convert/parquet, which the Hub accepts as a plain path.
         let path = Path::from_url_path(parsed.path().trim_start_matches('/'))
             .map_err(|e| GemingaError::Invalid(format!("bad url path {url}: {e}")))?;
-        Ok(Source { store, path, size, label, tele: self.tele.clone(), discovered_size: Arc::new(AtomicU64::new(0)) })
+        Ok(Source {
+            store,
+            path,
+            size,
+            label,
+            tele: self.tele.clone(),
+            discovered_size: Arc::new(AtomicU64::new(0)),
+        })
     }
 
     pub fn source_for_local(&self, path: &str) -> Result<Source> {
@@ -139,7 +162,14 @@ impl StoreCache {
         let size = std::fs::metadata(&abs)?.len();
         let opath = Path::from_filesystem_path(&abs)
             .map_err(|e| GemingaError::Invalid(format!("bad local path {}: {e}", abs.display())))?;
-        Ok(Source { store, path: opath, size: Some(size), label: abs.display().to_string(), tele: self.tele.clone(), discovered_size: Arc::new(AtomicU64::new(0)) })
+        Ok(Source {
+            store,
+            path: opath,
+            size: Some(size),
+            label: abs.display().to_string(),
+            tele: self.tele.clone(),
+            discovered_size: Arc::new(AtomicU64::new(0)),
+        })
     }
 }
 

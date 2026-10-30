@@ -17,7 +17,9 @@ use futures::FutureExt;
 use object_store::path::Path;
 use object_store::{GetOptions, GetRange, ObjectStore, ObjectStoreExt};
 use parquet::arrow::arrow_reader::{ArrowReaderMetadata, ArrowReaderOptions};
-use parquet::arrow::async_reader::{AsyncFileReader, MetadataSuffixFetch, ParquetRecordBatchStream};
+use parquet::arrow::async_reader::{
+    AsyncFileReader, MetadataSuffixFetch, ParquetRecordBatchStream,
+};
 use parquet::arrow::ParquetRecordBatchStreamBuilder;
 use parquet::arrow::ProjectionMask;
 use parquet::errors::{ParquetError, Result as PqResult};
@@ -68,7 +70,11 @@ fn to_pq(e: object_store::Error) -> ParquetError {
 impl AsyncFileReader for RangeReader {
     fn get_bytes(&mut self, range: Range<u64>) -> BoxFuture<'_, PqResult<Bytes>> {
         async move {
-            let b = self.store.get_range(&self.path, range).await.map_err(to_pq)?;
+            let b = self
+                .store
+                .get_range(&self.path, range)
+                .await
+                .map_err(to_pq)?;
             self.tele.add(b.len(), 1);
             Ok(b)
         }
@@ -78,7 +84,11 @@ impl AsyncFileReader for RangeReader {
     fn get_byte_ranges(&mut self, ranges: Vec<Range<u64>>) -> BoxFuture<'_, PqResult<Vec<Bytes>>> {
         async move {
             let n = ranges.len() as u64;
-            let v = self.store.get_ranges(&self.path, &ranges).await.map_err(to_pq)?;
+            let v = self
+                .store
+                .get_ranges(&self.path, &ranges)
+                .await
+                .map_err(to_pq)?;
             self.tele.add(v.iter().map(|b| b.len()).sum(), n);
             Ok(v)
         }
@@ -107,10 +117,18 @@ impl AsyncFileReader for RangeReader {
 
 impl MetadataSuffixFetch for &mut RangeReader {
     fn fetch_suffix(&mut self, suffix: usize) -> BoxFuture<'_, PqResult<Bytes>> {
-        let options = GetOptions { range: Some(GetRange::Suffix(suffix as u64)), ..Default::default() };
+        let options = GetOptions {
+            range: Some(GetRange::Suffix(suffix as u64)),
+            ..Default::default()
+        };
         async move {
-            let resp = self.store.get_opts(&self.path, options).await.map_err(to_pq)?;
-            self.discovered_size.store(resp.meta.size, Ordering::Relaxed);
+            let resp = self
+                .store
+                .get_opts(&self.path, options)
+                .await
+                .map_err(to_pq)?;
+            self.discovered_size
+                .store(resp.meta.size, Ordering::Relaxed);
             let b = resp.bytes().await.map_err(to_pq)?;
             self.tele.add(b.len(), 1);
             Ok(b)
@@ -135,23 +153,41 @@ pub struct Source {
 /// Average uncompressed bytes per row, from the footer — used to size a batch to a byte budget.
 pub fn bytes_per_row(meta: &ParquetMetaData) -> f64 {
     let rows: i64 = meta.row_groups().iter().map(|rg| rg.num_rows()).sum();
-    let bytes: i64 = meta.row_groups().iter().map(|rg| rg.total_byte_size()).sum();
-    if rows > 0 { bytes as f64 / rows as f64 } else { 1.0 }
+    let bytes: i64 = meta
+        .row_groups()
+        .iter()
+        .map(|rg| rg.total_byte_size())
+        .sum();
+    if rows > 0 {
+        bytes as f64 / rows as f64
+    } else {
+        1.0
+    }
 }
 
 /// Rows that fit in `chunk_bytes`, given the file's own width. Clamped to something sane.
-pub fn rows_for_bytes(meta: &ParquetMetaData, chunk_bytes: u64, columns: Option<&Vec<String>>) -> usize {
+pub fn rows_for_bytes(
+    meta: &ParquetMetaData,
+    chunk_bytes: u64,
+    columns: Option<&Vec<String>>,
+) -> usize {
     let mut per_row = bytes_per_row(meta);
     // Projection shrinks the row: scale by the fraction of columns kept, by uncompressed size.
     if let Some(cols) = columns {
-        let total: i64 = meta.row_groups().iter().flat_map(|rg| rg.columns()).map(|c| c.uncompressed_size()).sum();
+        let total: i64 = meta
+            .row_groups()
+            .iter()
+            .flat_map(|rg| rg.columns())
+            .map(|c| c.uncompressed_size())
+            .sum();
         let kept: i64 = meta
             .row_groups()
             .iter()
             .flat_map(|rg| rg.columns())
             .filter(|c| {
                 let p = c.column_path().string();
-                cols.iter().any(|w| p == *w || p.starts_with(&format!("{w}.")))
+                cols.iter()
+                    .any(|w| p == *w || p.starts_with(&format!("{w}.")))
             })
             .map(|c| c.uncompressed_size())
             .sum();
@@ -238,7 +274,11 @@ impl Source {
 fn validate_columns(schema: &SchemaRef, cols: &[String]) -> Result<()> {
     let missing: Vec<&String> = cols
         .iter()
-        .filter(|c| schema.column_with_name(c.split('.').next().unwrap_or(c)).is_none())
+        .filter(|c| {
+            schema
+                .column_with_name(c.split('.').next().unwrap_or(c))
+                .is_none()
+        })
         .collect();
     if missing.is_empty() {
         Ok(())
@@ -246,7 +286,11 @@ fn validate_columns(schema: &SchemaRef, cols: &[String]) -> Result<()> {
         Err(GemingaError::Invalid(format!(
             "unknown column(s) {:?}; available: {:?}",
             missing,
-            schema.fields().iter().map(|f| f.name().clone()).collect::<Vec<_>>()
+            schema
+                .fields()
+                .iter()
+                .map(|f| f.name().clone())
+                .collect::<Vec<_>>()
         )))
     }
 }
@@ -256,17 +300,21 @@ pub async fn load_all_metadata(
     sources: &[Source],
     concurrency: usize,
 ) -> Result<Vec<ArrowReaderMetadata>> {
-    let results: Vec<Result<(usize, ArrowReaderMetadata)>> = stream::iter(sources.iter().enumerate())
-        .map(|(i, s)| async move { s.metadata().await.map(|m| (i, m)) })
-        .buffer_unordered(concurrency.max(1))
-        .collect()
-        .await;
+    let results: Vec<Result<(usize, ArrowReaderMetadata)>> =
+        stream::iter(sources.iter().enumerate())
+            .map(|(i, s)| async move { s.metadata().await.map(|m| (i, m)) })
+            .buffer_unordered(concurrency.max(1))
+            .collect()
+            .await;
     let mut out: Vec<Option<ArrowReaderMetadata>> = (0..sources.len()).map(|_| None).collect();
     for r in results {
         let (i, m) = r?;
         out[i] = Some(m);
     }
-    Ok(out.into_iter().map(|m| m.expect("metadata slot filled")).collect())
+    Ok(out
+        .into_iter()
+        .map(|m| m.expect("metadata slot filled"))
+        .collect())
 }
 
 // ---------------------------------------------------------------------------
@@ -302,7 +350,11 @@ pub fn describe_file(src: &Source, meta: &ParquetMetaData) -> FileInfo {
         created_by: fm.created_by().map(|s| s.to_string()),
         key_value_metadata: fm
             .key_value_metadata()
-            .map(|kv| kv.iter().map(|k| (k.key.clone(), k.value.clone())).collect())
+            .map(|kv| {
+                kv.iter()
+                    .map(|k| (k.key.clone(), k.value.clone()))
+                    .collect()
+            })
             .unwrap_or_default(),
         row_groups: meta
             .row_groups()
@@ -349,7 +401,10 @@ fn merge_minmax(acc: &mut Option<MinMax>, s: &Statistics) {
             _ => return,
         },
         Statistics::Int32(v) => match (v.min_opt(), v.max_opt()) {
-            (Some(&mn), Some(&mx)) => MinMax::Int { min: mn as i64, max: mx as i64 },
+            (Some(&mn), Some(&mx)) => MinMax::Int {
+                min: mn as i64,
+                max: mx as i64,
+            },
             _ => return,
         },
         Statistics::Int64(v) => match (v.min_opt(), v.max_opt()) {
@@ -358,7 +413,10 @@ fn merge_minmax(acc: &mut Option<MinMax>, s: &Statistics) {
         },
         Statistics::Int96(_) => return,
         Statistics::Float(v) => match (v.min_opt(), v.max_opt()) {
-            (Some(&mn), Some(&mx)) => MinMax::Float { min: mn as f64, max: mx as f64 },
+            (Some(&mn), Some(&mx)) => MinMax::Float {
+                min: mn as f64,
+                max: mx as f64,
+            },
             _ => return,
         },
         Statistics::Double(v) => match (v.min_opt(), v.max_opt()) {
@@ -367,34 +425,53 @@ fn merge_minmax(acc: &mut Option<MinMax>, s: &Statistics) {
         },
         Statistics::ByteArray(v) => match (v.min_opt(), v.max_opt()) {
             (Some(mn), Some(mx)) => match (mn.as_utf8(), mx.as_utf8()) {
-                (Ok(a), Ok(b)) => MinMax::Text { min: a.to_string(), max: b.to_string() },
-                _ => MinMax::Bytes { min_len: mn.len(), max_len: mx.len() },
+                (Ok(a), Ok(b)) => MinMax::Text {
+                    min: a.to_string(),
+                    max: b.to_string(),
+                },
+                _ => MinMax::Bytes {
+                    min_len: mn.len(),
+                    max_len: mx.len(),
+                },
             },
             _ => return,
         },
         Statistics::FixedLenByteArray(v) => match (v.min_opt(), v.max_opt()) {
-            (Some(mn), Some(mx)) => MinMax::Bytes { min_len: mn.len(), max_len: mx.len() },
+            (Some(mn), Some(mx)) => MinMax::Bytes {
+                min_len: mn.len(),
+                max_len: mx.len(),
+            },
             _ => return,
         },
     };
     *acc = Some(match (acc.take(), next) {
         (None, n) => n,
-        (Some(MinMax::Int { min, max }), MinMax::Int { min: a, max: b }) => {
-            MinMax::Int { min: min.min(a), max: max.max(b) }
-        }
-        (Some(MinMax::Float { min, max }), MinMax::Float { min: a, max: b }) => {
-            MinMax::Float { min: min.min(a), max: max.max(b) }
-        }
-        (Some(MinMax::Bool { min, max }), MinMax::Bool { min: a, max: b }) => {
-            MinMax::Bool { min: min & a, max: max | b }
-        }
+        (Some(MinMax::Int { min, max }), MinMax::Int { min: a, max: b }) => MinMax::Int {
+            min: min.min(a),
+            max: max.max(b),
+        },
+        (Some(MinMax::Float { min, max }), MinMax::Float { min: a, max: b }) => MinMax::Float {
+            min: min.min(a),
+            max: max.max(b),
+        },
+        (Some(MinMax::Bool { min, max }), MinMax::Bool { min: a, max: b }) => MinMax::Bool {
+            min: min & a,
+            max: max | b,
+        },
         (Some(MinMax::Text { min, max }), MinMax::Text { min: a, max: b }) => MinMax::Text {
             min: if a < min { a } else { min },
             max: if b > max { b } else { max },
         },
-        (Some(MinMax::Bytes { min_len, max_len }), MinMax::Bytes { min_len: a, max_len: b }) => {
-            MinMax::Bytes { min_len: min_len.min(a), max_len: max_len.max(b) }
-        }
+        (
+            Some(MinMax::Bytes { min_len, max_len }),
+            MinMax::Bytes {
+                min_len: a,
+                max_len: b,
+            },
+        ) => MinMax::Bytes {
+            min_len: min_len.min(a),
+            max_len: max_len.max(b),
+        },
         (Some(prev), _) => prev, // type mismatch across files: keep what we had
     });
 }
@@ -456,7 +533,9 @@ pub fn spread_indices(total: usize, k: usize, seed: Option<u64>) -> Vec<usize> {
     (0..k)
         .map(|i| {
             let base = (i as f64 * stride) as usize;
-            let span = ((((i + 1) as f64) * stride) as usize).saturating_sub(base).max(1);
+            let span = ((((i + 1) as f64) * stride) as usize)
+                .saturating_sub(base)
+                .max(1);
             let jitter = rng.as_mut().map_or(0, |r| (r.next() as usize) % span);
             (base + jitter).min(total - 1)
         })
@@ -497,11 +576,23 @@ pub struct MultiFileIter {
 }
 
 impl MultiFileIter {
-    pub fn new(sources: Vec<Source>, metas: Vec<Option<ArrowReaderMetadata>>, opts: StreamOptions) -> Self {
+    pub fn new(
+        sources: Vec<Source>,
+        metas: Vec<Option<ArrowReaderMetadata>>,
+        opts: StreamOptions,
+    ) -> Self {
         let remaining = opts.limit;
         Self {
-            sources, metas, opts, next_file: 0, current: None, remaining,
-            rows_yielded: 0, batches_yielded: 0, budget: None, lease: Lease::none(),
+            sources,
+            metas,
+            opts,
+            next_file: 0,
+            current: None,
+            remaining,
+            rows_yielded: 0,
+            batches_yielded: 0,
+            budget: None,
+            lease: Lease::none(),
         }
     }
 

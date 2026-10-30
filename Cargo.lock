@@ -706,13 +706,15 @@ dependencies = [
 
 [[package]]
 name = "geminga"
-version = "0.1.0"
+version = "0.18.0"
 dependencies = [
+ "aho-corasick",
  "arrow",
  "arrow-pyarrow",
  "bytes",
  "flate2",
  "futures",
+ "memchr",
  "needletail",
  "object_store",
  "parquet",

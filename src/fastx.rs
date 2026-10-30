@@ -39,11 +39,17 @@ pub struct FastxChunker {
 }
 
 impl FastxChunker {
+    /// The chunk this reader plans to materialize next (its lease is taken before reading).
+    pub fn target_bytes(&self) -> usize {
+        self.target_bytes
+    }
+
     /// `target_bytes` is the *payload* size of one chunk (ids + sequences + qualities).
     /// The Arrow batch that comes out is close to this, plus offset arrays.
     pub fn new(path: &str, target_bytes: usize, max_records: usize) -> Result<Self> {
-        let mut reader = parse_fastx_file(path)
-            .map_err(|e| GemingaError::Invalid(format!("cannot open {path} as FASTA/FASTQ: {e}")))?;
+        let mut reader = parse_fastx_file(path).map_err(|e| {
+            GemingaError::Invalid(format!("cannot open {path} as FASTA/FASTQ: {e}"))
+        })?;
         // Peek one record to learn whether this file carries quality scores.
         let with_qual = match reader.next() {
             Some(Ok(rec)) => rec.qual().is_some(),
@@ -56,7 +62,11 @@ impl FastxChunker {
         Ok(Self {
             reader,
             target_bytes: target_bytes.max(1),
-            max_records: if max_records == 0 { usize::MAX } else { max_records },
+            max_records: if max_records == 0 {
+                usize::MAX
+            } else {
+                max_records
+            },
             with_qual,
             schema: fastx_schema(with_qual),
             exhausted: false,
@@ -139,5 +149,8 @@ impl FastxChunker {
 
 /// Actual resident size of a batch, for budget accounting.
 pub fn batch_bytes(b: &RecordBatch) -> u64 {
-    b.columns().iter().map(|c| c.get_array_memory_size() as u64).sum()
+    b.columns()
+        .iter()
+        .map(|c| c.get_array_memory_size() as u64)
+        .sum()
 }
